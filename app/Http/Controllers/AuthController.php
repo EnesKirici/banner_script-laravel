@@ -2,34 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
 use App\Models\LoginHistory;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
             return redirect()->route('admin.dashboard');
         }
+
         return view('admin.login');
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $validated = $request->validated();
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            // Log failed attempt
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             if ($user) {
                 LoginHistory::create([
                     'user_id' => $user->id,
@@ -46,14 +46,12 @@ class AuthController extends Controller
 
         Auth::login($user, $request->boolean('remember'));
 
-        // Update user login info
         $user->update([
             'last_login_at' => now(),
             'last_ip_address' => $request->ip(),
             'login_count' => $user->login_count + 1,
         ]);
 
-        // Log successful login
         LoginHistory::create([
             'user_id' => $user->id,
             'ip_address' => $request->ip(),
@@ -66,7 +64,7 @@ class AuthController extends Controller
         return redirect()->intended(route('admin.dashboard'));
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();

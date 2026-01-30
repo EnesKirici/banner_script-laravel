@@ -32,6 +32,7 @@ class Setting extends Model
     public static function get(string $key, mixed $default = null): mixed
     {
         $setting = static::where('key', $key)->first();
+
         return $setting ? $setting->typed_value : $default;
     }
 
@@ -53,7 +54,7 @@ class Setting extends Model
     /**
      * Scope by group
      */
-    public function scopeGroup($query, string $group)
+    public function scopeGroup(\Illuminate\Database\Eloquent\Builder $query, string $group): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('group', $group);
     }

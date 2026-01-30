@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreThemeRequest;
+use App\Http\Requests\UpdateThemeRequest;
 use App\Models\LoginHistory;
 use App\Models\ParticleTheme;
 use App\Models\Setting;
-use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class AdminController extends Controller
 {
-    public function dashboard()
+    public function dashboard(): View
     {
         $stats = [
             'total_logins' => LoginHistory::where('success', true)->count(),
@@ -30,34 +34,30 @@ class AdminController extends Controller
         return view('admin.dashboard', compact('stats', 'recentLogins'));
     }
 
-    public function particles()
+    public function particles(): View
     {
         $themes = ParticleTheme::orderBy('is_preset', 'desc')->orderBy('name')->get();
         $activeTheme = ParticleTheme::active();
-        
+
         return view('admin.particles', compact('themes', 'activeTheme'));
     }
 
-    public function activateTheme(ParticleTheme $theme)
+    public function activateTheme(ParticleTheme $theme): RedirectResponse
     {
         $theme->activate();
-        
+
         return back()->with('success', "'{$theme->name}' teması aktifleştirildi.");
     }
 
-    public function storeTheme(Request $request)
+    public function storeTheme(StoreThemeRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'config' => 'required|json',
-            'preview_color' => 'nullable|string|max:20',
-        ]);
+        $validated = $request->validated();
 
         $theme = ParticleTheme::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-            'config' => json_decode($request->config, true),
-            'preview_color' => $request->preview_color ?? '#a855f7',
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'config' => json_decode($validated['config'], true),
+            'preview_color' => $validated['preview_color'] ?? '#a855f7',
             'is_preset' => false,
             'is_active' => false,
         ]);
@@ -65,24 +65,20 @@ class AdminController extends Controller
         return back()->with('success', "'{$theme->name}' teması oluşturuldu.");
     }
 
-    public function updateTheme(Request $request, ParticleTheme $theme)
+    public function updateTheme(UpdateThemeRequest $request, ParticleTheme $theme): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'config' => 'required|json',
-            'preview_color' => 'nullable|string|max:20',
-        ]);
+        $validated = $request->validated();
 
         $theme->update([
-            'name' => $request->name,
-            'config' => json_decode($request->config, true),
-            'preview_color' => $request->preview_color ?? $theme->preview_color,
+            'name' => $validated['name'],
+            'config' => json_decode($validated['config'], true),
+            'preview_color' => $validated['preview_color'] ?? $theme->preview_color,
         ]);
 
         return back()->with('success', "'{$theme->name}' teması güncellendi.");
     }
 
-    public function destroyTheme(ParticleTheme $theme)
+    public function destroyTheme(ParticleTheme $theme): RedirectResponse
     {
         if ($theme->is_preset) {
             return back()->with('error', 'Preset temalar silinemez.');
@@ -98,25 +94,25 @@ class AdminController extends Controller
         return back()->with('success', "'{$name}' teması silindi.");
     }
 
-    public function getActiveThemeConfig()
+    public function getActiveThemeConfig(): JsonResponse
     {
         $theme = ParticleTheme::active();
-        
-        if (!$theme) {
+
+        if (! $theme) {
             return response()->json(['config' => null]);
         }
 
         return response()->json(['config' => $theme->config]);
     }
 
-    public function settings()
+    public function settings(): View
     {
         $settings = Setting::all()->groupBy('group');
-        
+
         return view('admin.settings', compact('settings'));
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): RedirectResponse
     {
         foreach ($request->settings as $key => $value) {
             Setting::set($key, $value);
@@ -125,7 +121,7 @@ class AdminController extends Controller
         return back()->with('success', 'Ayarlar güncellendi.');
     }
 
-    public function seedPresets()
+    public function seedPresets(): RedirectResponse
     {
         $presets = ParticleTheme::getDefaultPresets();
         $count = 0;
@@ -138,8 +134,7 @@ class AdminController extends Controller
             $count++;
         }
 
-        // Activate first preset if none active
-        if (!ParticleTheme::active()) {
+        if (! ParticleTheme::active()) {
             ParticleTheme::where('slug', 'hexagons')->first()?->activate();
         }
 

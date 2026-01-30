@@ -2,53 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\View\View;
 
 class TMDBController extends Controller
 {
-    private $apiKey;
-    private $baseUrl = 'https://api.themoviedb.org/3';
+    private string $baseUrl = 'https://api.themoviedb.org/3';
 
-    public function __construct()
+    public function index(): View
     {
-        $this->apiKey = config('services.tmdb.api_key') ?? env('TMDB_API_KEY');
-    }
+        $apiKey = config('services.tmdb.api_key');
 
-    public function index()
-    {
-        // Popüler Filmler (İlk 10)
         $popularMovies = Http::get("{$this->baseUrl}/movie/popular", [
-            'api_key' => $this->apiKey,
+            'api_key' => $apiKey,
             'language' => 'tr-TR',
-            'page' => 1
+            'page' => 1,
         ])->json()['results'] ?? [];
 
-        // Popüler Diziler (İlk 10)
         $popularShows = Http::get("{$this->baseUrl}/tv/popular", [
-            'api_key' => $this->apiKey,
+            'api_key' => $apiKey,
             'language' => 'tr-TR',
-            'page' => 1
+            'page' => 1,
         ])->json()['results'] ?? [];
 
-        // Verileri işle (map)
-        $popularMovies = collect($popularMovies)->take(10)->map(fn($m) => $this->formatItem($m, 'movie'));
-        $popularShows = collect($popularShows)->take(10)->map(fn($s) => $this->formatItem($s, 'tv'));
+        $popularMovies = collect($popularMovies)->take(10)->map(fn ($m) => $this->formatItem($m, 'movie'));
+        $popularShows = collect($popularShows)->take(10)->map(fn ($s) => $this->formatItem($s, 'tv'));
 
-        return view('welcome', compact('popularMovies', 'popularShows'));
+        return view('home', compact('popularMovies', 'popularShows'));
     }
 
-    public function search(Request $request)
+    public function search(Request $request): JsonResponse
     {
         $query = $request->input('query');
 
-        if (!$query) {
+        if (! $query) {
             return response()->json(['results' => []]);
         }
 
-        // Multi Search (Hem Film Hem Dizi)
+        $apiKey = config('services.tmdb.api_key');
+
         $response = Http::get("{$this->baseUrl}/search/multi", [
-            'api_key' => $this->apiKey,
+            'api_key' => $apiKey,
             'query' => $query,
             'language' => 'tr-TR',
             'include_adult' => false,
@@ -56,26 +52,29 @@ class TMDBController extends Controller
 
         if ($response->successful()) {
             $results = $response->json()['results'];
-            
-            // Sadece görseli olanları ve kişi (person) olmayanları filtrele
-            $results = array_filter($results, function($item) {
-                return !empty($item['backdrop_path']) && $item['media_type'] !== 'person';
+
+            $results = array_filter($results, function ($item) {
+                return ! empty($item['backdrop_path']) && $item['media_type'] !== 'person';
             });
 
-            // Formatla
-            $results = array_map(fn($item) => $this->formatItem($item, $item['media_type']), $results);
+            $results = array_map(fn ($item) => $this->formatItem($item, $item['media_type']), $results);
 
             return response()->json([
-                'results' => array_values($results)
+                'results' => array_values($results),
             ]);
         }
 
         return response()->json(['error' => 'TMDB API Hatası'], 500);
     }
 
-    private function formatItem($item, $type)
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
+    private function formatItem(array $item, string $type): array
     {
         $isMovie = $type === 'movie';
+
         return [
             'id' => $item['id'],
             'title' => $isMovie ? ($item['title'] ?? '') : ($item['name'] ?? ''),
@@ -84,7 +83,7 @@ class TMDBController extends Controller
             'vote_average' => $item['vote_average'] ?? 0,
             'release_date' => $isMovie ? ($item['release_date'] ?? null) : ($item['first_air_date'] ?? null),
             'type' => $isMovie ? 'Film' : 'Dizi',
-            'raw_type' => $isMovie ? 'movie' : 'tv'
+            'raw_type' => $isMovie ? 'movie' : 'tv',
         ];
     }
 }
