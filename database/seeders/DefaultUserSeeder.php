@@ -13,10 +13,10 @@ class DefaultUserSeeder extends Seeder
     public function run()
 {
     \App\Models\User::updateOrCreate(
-        ['email' => 'elw@banner.local'],
+        ['email' => 'admin@admin.com'],
         [
             'name' => 'elw',
-            'password' => \Hash::make('Enye1824/'),
+            'password' => \Hash::make('admin123'),
             'email_verified_at' => now(),
         ]
     );
