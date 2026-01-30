@@ -67,6 +67,32 @@ class TMDBController extends Controller
         return response()->json(['error' => 'TMDB API Hatası'], 500);
     }
 
+    public function images(string $type, int $id): JsonResponse
+    {
+        if (! in_array($type, ['movie', 'tv'])) {
+            return response()->json(['error' => 'Geçersiz tür'], 400);
+        }
+
+        $apiKey = config('services.tmdb.api_key');
+
+        $response = Http::get("{$this->baseUrl}/{$type}/{$id}/images", [
+            'api_key' => $apiKey,
+            'include_image_language' => 'tr,en,null',
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+
+            return response()->json([
+                'backdrops' => $data['backdrops'] ?? [],
+                'posters' => $data['posters'] ?? [],
+                'logos' => $data['logos'] ?? [],
+            ]);
+        }
+
+        return response()->json(['error' => 'TMDB API Hatası'], 500);
+    }
+
     /**
      * @param  array<string, mixed>  $item
      * @return array<string, mixed>

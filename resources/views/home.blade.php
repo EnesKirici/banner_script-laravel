@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-neutral-950 text-white flex flex-col md:flex-row font-sans overflow-hidden">
-    
+
     <!-- Mobile Header -->
     <div class="md:hidden flex items-center justify-between p-4 border-b border-white/5 bg-neutral-900/95 backdrop-blur-md sticky top-0 z-40">
         <div class="flex items-center gap-2">
@@ -18,8 +18,8 @@
 
     <!-- Left Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-neutral-900 border-r border-white/5 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 z-50 flex flex-col h-[calc(100vh-65px)] md:h-screen">
-        
-        <!-- Sidebar Header (Logo) -->
+
+        <!-- Sidebar Header -->
         <div class="p-6 pb-4 hidden md:block shrink-0 bg-neutral-900 z-20">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-linear-to-br from-fuchsia-600 to-purple-700 shadow-[0_0_15px_rgba(217,70,239,0.3)]">
@@ -31,64 +31,67 @@
 
         <!-- Scrollable Content Area -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            
-            <!-- POPULAR MOVIES (Top Half) -->
-            <div class="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide border-b border-white/5">
-                <div class="sticky top-0 z-20 bg-neutral-900">
+
+            <!-- POPULAR MOVIES -->
+            <div class="flex-1 overflow-hidden border-b border-white/5">
+                <div class="px-4 bg-neutral-900 z-20">
                     <h3 class="py-3 text-[10px] uppercase tracking-[0.2em] text-fuchsia-500 font-bold flex items-center gap-2 border-b border-white/5">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
                         Popüler Filmler
                     </h3>
                 </div>
-                <div class="space-y-2">
-                    @foreach($popularMovies as $item)
-                        <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
-                            <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800">
-                            <div class="min-w-0">
-                                <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
-                                <span class="text-xs text-neutral-500">{{ \Carbon\Carbon::parse($item['release_date'])->format('Y') }}</span>
+                <div class="sidebar-slider overflow-hidden h-full px-4 scrollbar-hide">
+                    <div class="slider-track space-y-2 py-2">
+                        @foreach($popularMovies as $item)
+                            <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+                                <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800" alt="{{ $item['title'] }}">
+                                <div class="min-w-0">
+                                    <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
+                                    <span class="text-xs text-neutral-500">{{ $item['release_date'] ? \Carbon\Carbon::parse($item['release_date'])->format('Y') : '' }}</span>
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
-            <!-- POPULAR SHOWS (Bottom Half) -->
-            <div class="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-                <div class="sticky top-0 z-20 bg-neutral-900">
+            <!-- POPULAR SHOWS -->
+            <div class="flex-1 overflow-hidden">
+                <div class="px-4 bg-neutral-900 z-20">
                     <h3 class="py-3 text-[10px] uppercase tracking-[0.2em] text-purple-500 font-bold flex items-center gap-2 border-b border-white/5">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                         Popüler Diziler
                     </h3>
                 </div>
-                <div class="space-y-2">
-                    @foreach($popularShows as $item)
-                        <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
-                            <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800">
-                            <div class="min-w-0">
-                                <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
-                                <span class="text-xs text-neutral-500">{{ number_format($item['vote_average'], 1) }} Puan</span>
+                <div class="sidebar-slider overflow-hidden h-full px-4 scrollbar-hide">
+                    <div class="slider-track space-y-2 py-2">
+                        @foreach($popularShows as $item)
+                            <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+                                <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800" alt="{{ $item['title'] }}">
+                                <div class="min-w-0">
+                                    <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
+                                    <span class="text-xs text-neutral-500">{{ number_format($item['vote_average'], 1) }} Puan</span>
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             </div>
-            
+
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-[calc(100vh-65px)] md:h-screen overflow-y-auto relative scroll-smooth bg-neutral-950">
-        
-        <!-- Particles Background - Covers entire main area -->
+
+        <!-- Particles Background -->
         <div id="tsparticles" class="absolute! inset-0 z-0 pointer-events-auto"></div>
-        
-        <!-- Gradient Overlay for depth -->
+
+        <!-- Gradient Overlay -->
         <div class="absolute inset-0 bg-linear-to-b from-transparent via-neutral-950/50 to-neutral-950 pointer-events-none z-1"></div>
 
         <!-- Hero Section -->
         <div class="relative w-full py-16 px-4 md:px-12 flex flex-col items-center justify-center text-center z-10">
-
             <h1 class="relative text-4xl md:text-6xl font-black tracking-tighter mb-4">
                 <span class="block text-white/90">Search Movies</span>
                 <span class="block bg-clip-text text-transparent bg-linear-to-r from-fuchsia-500 via-purple-500 to-cyan-400">& TV Shows</span>
@@ -115,7 +118,7 @@
 
         <!-- Content Area -->
         <div class="relative flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-8 pb-24 z-10">
-            
+
             <div id="loading" class="hidden py-12 text-center">
                 <div class="inline-block w-10 h-10 border-4 border-neutral-800 border-t-fuchsia-500 rounded-full animate-spin"></div>
             </div>
@@ -129,41 +132,18 @@
             </div>
 
             <!-- Grid -->
-            <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-                <!-- JS Enjects Here -->
-            </div>
+            <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6"></div>
         </div>
     </main>
 </div>
 
 <!-- Modal -->
 <div id="imageModal" class="fixed inset-0 z-60 hidden">
-    <div class="absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0" onclick="closeModal()"></div>
-    
+    <div class="modal-backdrop absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"></div>
+
     <div class="absolute inset-0 flex items-center justify-center p-4 md:p-8 pointer-events-none">
         <div id="modalContainer" class="w-full max-w-6xl bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh] pointer-events-auto transform transition-all duration-300 scale-95 opacity-0">
-            <div class="absolute top-0 left-0 right-0 p-4 flex justify-between z-10 bg-linear-to-b from-black/80 to-transparent">
-                <h2 id="modalTitle" class="text-xl font-bold text-white px-2"></h2>
-                <button onclick="closeModal()" class="p-2 bg-black/50 rounded-full hover:bg-fuchsia-600 text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-
-            <div class="flex-1 bg-black flex items-center justify-center p-2 relative">
-                <img id="modalImage" src="" class="max-w-full max-h-[70vh] object-contain">
-            </div>
-            
-            <div class="p-6 bg-neutral-900 border-t border-white/5 flex justify-between items-center">
-                <div class="text-xs text-neutral-400 space-y-1">
-                    <div class="flex gap-2"><span class="font-bold text-white">BOYUT:</span> <span id="modalDimensions">...</span></div>
-                    <div class="flex gap-2"><span class="font-bold text-white">TARİH:</span> <span id="modalDate">...</span></div>
-                </div>
-                
-                <a id="downloadBtn" href="#" class="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-fuchsia-500 hover:text-white transition-colors text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    İndir
-                </a>
-            </div>
+            <div id="modalContent"></div>
         </div>
     </div>
 </div>

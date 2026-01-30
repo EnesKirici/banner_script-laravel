@@ -1,12 +1,9 @@
 import './bootstrap';
-import { initTMDB } from './tmdb';
+import { initTMDB, initSidebarSlider } from './tmdb';
 import { initParticles } from './particles';
 
-// DOM yüklendiğinde başlat
 document.addEventListener('DOMContentLoaded', async () => {
-    // Particles background'u başlat
     await initParticles();
-    
-    // TMDB fonksiyonlarını başlat
     initTMDB();
+    initSidebarSlider();
 });
