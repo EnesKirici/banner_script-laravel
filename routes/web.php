@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [TMDBController::class, 'index'])->name('home');
 Route::get('/search', [TMDBController::class, 'search'])->name('search');
 Route::get('/images/{type}/{id}', [TMDBController::class, 'images'])->name('images');
+Route::get('/proxy-image', [TMDBController::class, 'proxyImage'])->name('proxy.image');
+Route::post('/generate-quotes', [TMDBController::class, 'generateQuotes'])->name('generate.quotes');
 
 // Particles API (public - for frontend)
 Route::get('/api/particles/config', [AdminController::class, 'getActiveThemeConfig'])->name('api.particles.config');

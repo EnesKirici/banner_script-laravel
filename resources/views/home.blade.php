@@ -16,8 +16,13 @@
         </button>
     </div>
 
+    <!-- Sidebar Toggle Button (Desktop) -->
+    <button id="sidebarToggle" class="hidden md:flex fixed left-80 top-1/2 -translate-y-1/2 z-50 w-6 h-14 items-center justify-center bg-neutral-800/90 border border-white/10 rounded-r-lg hover:bg-fuchsia-600 transition-all duration-300 text-neutral-400 hover:text-white backdrop-blur-sm" style="cursor:pointer">
+        <svg id="toggleArrow" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+    </button>
+
     <!-- Left Sidebar -->
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-neutral-900 border-r border-white/5 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 z-50 flex flex-col h-[calc(100vh-65px)] md:h-screen">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-neutral-900 border-r border-white/5 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 z-50 flex flex-col h-[calc(100vh-65px)] md:h-screen">
 
         <!-- Sidebar Header -->
         <div class="p-6 pb-4 hidden md:block shrink-0 bg-neutral-900 z-20">
@@ -43,13 +48,26 @@
                 <div class="sidebar-slider overflow-hidden h-full px-4 scrollbar-hide">
                     <div class="slider-track space-y-2 py-2">
                         @foreach($popularMovies as $item)
-                            <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+                            <button
+                                type="button"
+                                class="sidebar-item group flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-white/5 transition-all cursor-pointer"
+                                data-sidebar-item
+                                data-tmdb-id="{{ $item['id'] }}"
+                                data-tmdb-title="{{ $item['title'] }}"
+                                data-tmdb-overview="{{ $item['overview'] }}"
+                                data-tmdb-poster-path="{{ $item['poster_path'] }}"
+                                data-tmdb-backdrop-path="{{ $item['backdrop_path'] }}"
+                                data-tmdb-vote-average="{{ $item['vote_average'] }}"
+                                data-tmdb-release-date="{{ $item['release_date'] }}"
+                                data-tmdb-type="{{ $item['type'] }}"
+                                data-tmdb-raw-type="{{ $item['raw_type'] }}"
+                            >
                                 <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800" alt="{{ $item['title'] }}">
                                 <div class="min-w-0">
                                     <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
                                     <span class="text-xs text-neutral-500">{{ $item['release_date'] ? \Carbon\Carbon::parse($item['release_date'])->format('Y') : '' }}</span>
                                 </div>
-                            </div>
+                            </button>
                         @endforeach
                     </div>
                 </div>
@@ -66,13 +84,26 @@
                 <div class="sidebar-slider overflow-hidden h-full px-4 scrollbar-hide">
                     <div class="slider-track space-y-2 py-2">
                         @foreach($popularShows as $item)
-                            <div class="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+                            <button
+                                type="button"
+                                class="sidebar-item group flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-white/5 transition-all cursor-pointer"
+                                data-sidebar-item
+                                data-tmdb-id="{{ $item['id'] }}"
+                                data-tmdb-title="{{ $item['title'] }}"
+                                data-tmdb-overview="{{ $item['overview'] }}"
+                                data-tmdb-poster-path="{{ $item['poster_path'] }}"
+                                data-tmdb-backdrop-path="{{ $item['backdrop_path'] }}"
+                                data-tmdb-vote-average="{{ $item['vote_average'] }}"
+                                data-tmdb-release-date="{{ $item['release_date'] }}"
+                                data-tmdb-type="{{ $item['type'] }}"
+                                data-tmdb-raw-type="{{ $item['raw_type'] }}"
+                            >
                                 <img src="https://image.tmdb.org/t/p/w92{{ $item['poster_path'] }}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition-transform bg-neutral-800" alt="{{ $item['title'] }}">
                                 <div class="min-w-0">
                                     <h4 class="text-sm text-neutral-300 group-hover:text-white truncate">{{ $item['title'] }}</h4>
                                     <span class="text-xs text-neutral-500">{{ number_format($item['vote_average'], 1) }} Puan</span>
                                 </div>
-                            </div>
+                            </button>
                         @endforeach
                     </div>
                 </div>
@@ -91,7 +122,7 @@
         <div class="absolute inset-0 bg-linear-to-b from-transparent via-neutral-950/50 to-neutral-950 pointer-events-none z-1"></div>
 
         <!-- Hero Section -->
-        <div class="relative w-full py-16 px-4 md:px-12 flex flex-col items-center justify-center text-center z-10">
+        <div class="relative w-full min-h-[60vh] py-16 px-4 md:px-12 flex flex-col items-center justify-center text-center z-10">
             <h1 class="relative text-4xl md:text-6xl font-black tracking-tighter mb-4">
                 <span class="block text-white/90">Search Movies</span>
                 <span class="block bg-clip-text text-transparent bg-linear-to-r from-fuchsia-500 via-purple-500 to-cyan-400">& TV Shows</span>
@@ -106,6 +137,17 @@
                     </div>
                     <input type="text" id="movieSearch" class="w-full bg-transparent text-white p-4 pl-4 focus:outline-none placeholder-neutral-500 text-lg" placeholder="Search movies or TV shows..." autocomplete="off">
                 </div>
+            </div>
+
+            <!-- Queue Status -->
+            <div id="queueStatus" class="hidden text-sm text-neutral-400 mt-3 font-mono"></div>
+
+            <!-- Batch Progress -->
+            <div id="batchProgress" class="hidden w-full max-w-2xl mt-3">
+                <div class="bg-neutral-800/80 rounded-full overflow-hidden h-2">
+                    <div id="batchProgressBar" class="h-full bg-linear-to-r from-fuchsia-600 to-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="batchProgressText" class="text-xs text-neutral-500 mt-1.5 font-mono text-center"></p>
             </div>
 
             <!-- Filters -->
@@ -137,13 +179,24 @@
     </main>
 </div>
 
-<!-- Modal -->
+<!-- Image Modal -->
 <div id="imageModal" class="fixed inset-0 z-60 hidden">
     <div class="modal-backdrop absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"></div>
 
     <div class="absolute inset-0 flex items-center justify-center p-4 md:p-8 pointer-events-none">
         <div id="modalContainer" class="w-full max-w-6xl bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh] pointer-events-auto transform transition-all duration-300 scale-95 opacity-0">
-            <div id="modalContent"></div>
+            <div id="modalContent" class="flex-1 flex flex-col overflow-hidden min-h-0"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Quotes Modal -->
+<div id="quotesModal" class="fixed inset-0 z-70 hidden">
+    <div class="quotes-backdrop absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"></div>
+
+    <div class="absolute inset-0 flex items-center justify-center p-4 md:p-8 pointer-events-none">
+        <div id="quotesContainer" class="w-full max-w-5xl bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh] pointer-events-auto transform transition-all duration-300 scale-95 opacity-0">
+            <div id="quotesContent" class="flex-1 flex flex-col overflow-hidden min-h-0"></div>
         </div>
     </div>
 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\QuoteGeneratorService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +12,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(QuoteGeneratorService::class, function () {
+            return new QuoteGeneratorService(
+                apiKey: (string) config('services.gemini.api_key'),
+                models: (array) config('services.gemini.models', []),
+                baseUrl: (string) config('services.gemini.base_url'),
+            );
+        });
     }
 
     /**

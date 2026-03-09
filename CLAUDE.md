@@ -1,3 +1,7 @@
+## Dil Tercihi
+- Kullanıcıyla tüm iletişim Türkçe olmalıdır. Sorular, açıklamalar, onay istekleri ve düşünce süreçleri Türkçe yazılmalıdır.
+- Kod, komutlar ve teknik terimler (değişken adları, fonksiyon isimleri, terminal komutları vb.) İngilizce kalabilir.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

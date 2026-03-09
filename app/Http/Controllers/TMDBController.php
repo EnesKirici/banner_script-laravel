@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\GenerateQuotesRequest;
+use App\Services\QuoteGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class TMDBController extends Controller
 {
-    private string $baseUrl = 'https://api.themoviedb.org/3';
+    private string $baseUrl;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('services.tmdb.base_url');
+    }
 
     public function index(): View
     {
@@ -93,6 +101,69 @@ class TMDBController extends Controller
         return response()->json(['error' => 'TMDB API Hatası'], 500);
     }
 
+    public function proxyImage(Request $request): \Illuminate\Http\Response
+    {
+        $path = $request->input('path');
+        $size = $request->input('size', 'original');
+
+        if (! $path || ! preg_match('/^\/[a-zA-Z0-9_]+\.\w+$/', $path)) {
+            abort(400, 'Geçersiz dosya yolu');
+        }
+
+        $validSizes = ['w45', 'w92', 'w154', 'w185', 'w300', 'w342', 'w500', 'w780', 'w1280', 'original'];
+        if (! in_array($size, $validSizes)) {
+            abort(400, 'Geçersiz boyut');
+        }
+
+        $response = Http::timeout(30)->get("https://image.tmdb.org/t/p/{$size}{$path}");
+
+        if ($response->successful()) {
+            return response($response->body())
+                ->header('Content-Type', $response->header('Content-Type'))
+                ->header('Cache-Control', 'public, max-age=86400');
+        }
+
+        abort(502, 'Görsel alınamadı');
+    }
+
+    public function generateQuotes(GenerateQuotesRequest $request, QuoteGeneratorService $service): JsonResponse
+    {
+        $id = $request->integer('id');
+        $type = $request->string('type');
+        $title = $request->string('title');
+        $overview = $request->string('overview');
+        $style = $request->string('style', '');
+        $regenerate = $request->boolean('regenerate', false);
+
+        $cacheKey = "quotes_{$type}_{$id}";
+
+        if ($regenerate) {
+            Cache::forget($cacheKey);
+        }
+
+        $quotes = Cache::get($cacheKey);
+
+        if ($quotes === null) {
+            $quotes = $service->generateQuotes((string) $title, (string) $overview, (string) $type, (string) $style);
+
+            if (! empty($quotes)) {
+                Cache::put($cacheKey, $quotes, now()->addDays(7));
+            }
+        }
+
+        if (empty($quotes)) {
+            return response()->json([
+                'error' => 'Sözler üretilemedi. Lütfen tekrar deneyin.',
+                'debug' => $service->getLastError(),
+            ], 500);
+        }
+
+        return response()->json([
+            'quotes' => $quotes,
+            'model' => $service->getUsedModel(),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $item
      * @return array<string, mixed>
@@ -104,6 +175,7 @@ class TMDBController extends Controller
         return [
             'id' => $item['id'],
             'title' => $isMovie ? ($item['title'] ?? '') : ($item['name'] ?? ''),
+            'overview' => $item['overview'] ?? '',
             'poster_path' => $item['poster_path'],
             'backdrop_path' => $item['backdrop_path'],
             'vote_average' => $item['vote_average'] ?? 0,
