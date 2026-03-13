@@ -22,6 +22,11 @@
         color: #ffffff;
     }
 
+    /* Tum buton ve tiklanabilir elemanlara pointer cursor */
+    button, [role="button"], a, summary {
+        cursor: pointer;
+    }
+
     /* Livewire wire:navigate progress bar rengi */
     [x-ref="bar"] {
         background-color: #c026d3 !important;

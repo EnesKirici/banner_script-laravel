@@ -11,13 +11,13 @@
             <div class="w-6 h-6 flex items-center justify-center rounded bg-linear-to-br from-fuchsia-600 to-purple-700 font-bold text-xs">B</div>
             <span class="font-bold tracking-tight">BannerArchive</span>
         </div>
-        <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')" class="text-white p-2">
+        <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')" class="cursor-pointer text-white p-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </button>
     </div>
 
     <!-- Sidebar Toggle Button (Desktop) -->
-    <button id="sidebarToggle" class="hidden md:flex fixed left-80 top-1/2 -translate-y-1/2 z-50 w-6 h-14 items-center justify-center bg-neutral-800/90 border border-white/10 rounded-r-lg hover:bg-fuchsia-600 transition-all duration-300 text-neutral-400 hover:text-white backdrop-blur-sm" style="cursor:pointer">
+    <button id="sidebarToggle" class="cursor-pointer hidden md:flex fixed left-80 top-1/2 -translate-y-1/2 z-50 w-6 h-14 items-center justify-center bg-neutral-800/90 border border-white/10 rounded-r-lg hover:bg-fuchsia-600 transition-all duration-300 text-neutral-400 hover:text-white backdrop-blur-sm">
         <svg id="toggleArrow" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
     </button>
 
@@ -116,7 +116,7 @@
     <main class="flex-1 flex flex-col h-[calc(100vh-65px)] md:h-screen overflow-y-auto relative scroll-smooth bg-neutral-950">
 
         <!-- Particles Background -->
-        <div id="tsparticles" class="absolute! inset-0 z-0 pointer-events-auto"></div>
+        <div id="tsparticles" class="absolute! inset-0 z-0 pointer-events-none"></div>
 
         <!-- Gradient Overlay -->
         <div class="absolute inset-0 bg-linear-to-b from-transparent via-neutral-950/50 to-neutral-950 pointer-events-none z-1"></div>
@@ -129,57 +129,16 @@
             </h1>
             <p class="text-neutral-400 text-sm md:text-base mb-8">Download high-resolution banners & backdrops</p>
 
-            <!-- Search Bar -->
-            <div class="relative w-full max-w-2xl z-20">
-                <div class="relative flex items-center bg-black/80 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl overflow-hidden transition-all duration-300 focus-within:border-fuchsia-500 focus-within:shadow-[0_0_30px_rgba(217,70,239,0.3)]">
-                    <div class="pl-6 text-neutral-500">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <input type="text" id="movieSearch" class="w-full bg-transparent text-white p-4 pl-4 focus:outline-none placeholder-neutral-500 text-lg" placeholder="Search movies or TV shows..." autocomplete="off">
-                </div>
-            </div>
-
-            <!-- Queue Status -->
-            <div id="queueStatus" class="hidden text-sm text-neutral-400 mt-3 font-mono"></div>
-
-            <!-- Batch Progress -->
-            <div id="batchProgress" class="hidden w-full max-w-2xl mt-3">
-                <div class="bg-neutral-800/80 rounded-full overflow-hidden h-2">
-                    <div id="batchProgressBar" class="h-full bg-linear-to-r from-fuchsia-600 to-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
-                <p id="batchProgressText" class="text-xs text-neutral-500 mt-1.5 font-mono text-center"></p>
-            </div>
-
-            <!-- Filters -->
-            <div id="filters" class="flex items-center gap-2 mt-6">
-                <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" data-filter="all">All</button>
-                <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-neutral-800/80 backdrop-blur-sm text-white hover:bg-neutral-700 border border-white/10" data-filter="movie">Movies</button>
-                <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-neutral-800/80 backdrop-blur-sm text-white hover:bg-neutral-700 border border-white/10" data-filter="tv">TV Shows</button>
-            </div>
-        </div>
-
-        <!-- Content Area -->
-        <div class="relative flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-8 pb-24 z-10">
-
-            <div id="loading" class="hidden py-12 text-center">
-                <div class="inline-block w-10 h-10 border-4 border-neutral-800 border-t-fuchsia-500 rounded-full animate-spin"></div>
-            </div>
-
-            <div id="initialState" class="text-center py-20 opacity-30 pointer-events-none">
-                <p class="text-neutral-600 text-sm">Yüksek çözünürlüklü banner araması yapın</p>
-            </div>
-
-            <div id="emptyState" class="hidden text-center py-12">
-                <p class="text-neutral-500">Sonuç bulunamadı.</p>
-            </div>
-
-            <!-- Grid -->
-            <div id="moviesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6"></div>
+            {{-- ═══ LIVEWIRE: MovieSearch Component ═══
+                 Arama cubugu, filtre butonlari ve sonuc grid'i
+                 Eski JS-driven arama yerine Livewire ile sunucu tarafinda calisir
+                 <livewire:component-adi /> → Gomulu (embedded) component kullanimi --}}
+            <livewire:movie-search />
         </div>
     </main>
 </div>
 
-<!-- Image Modal -->
+<!-- Image Modal (JS-driven — Canvas API gerektigi icin Livewire'a cevirilmedi) -->
 <div id="imageModal" class="fixed inset-0 z-60 hidden">
     <div class="modal-backdrop absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"></div>
 
@@ -190,14 +149,9 @@
     </div>
 </div>
 
-<!-- Quotes Modal -->
-<div id="quotesModal" class="fixed inset-0 z-70 hidden">
-    <div class="quotes-backdrop absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"></div>
-
-    <div class="absolute inset-0 flex items-center justify-center p-4 md:p-8 pointer-events-none">
-        <div id="quotesContainer" class="w-full max-w-5xl bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh] pointer-events-auto transform transition-all duration-300 scale-95 opacity-0">
-            <div id="quotesContent" class="flex-1 flex flex-col overflow-hidden min-h-0"></div>
-        </div>
-    </div>
-</div>
+{{-- ═══ LIVEWIRE: QuoteGenerator Component ═══
+     AI soz uretme modal'i — tamamen Livewire ile calisiyor
+     Eski JS quotes modal'i yerine sunucu-driven modal
+     Image modal'daki "AI Sozleri" butonu bu component'i tetikler --}}
+<livewire:quote-generator />
 @endsection
