@@ -86,6 +86,22 @@ function initGallery() {
         downloadProgressBar: document.getElementById('downloadProgressBar'),
     };
 
+    // ═══ OVERVIEW TOGGLE ═══
+    const overviewToggle = document.getElementById('overviewToggle');
+    if (overviewToggle) {
+        const overviewText = document.getElementById('overviewText');
+        const overviewArrow = document.getElementById('overviewArrow');
+        const overviewLabel = document.getElementById('overviewLabel');
+        let expanded = false;
+
+        overviewToggle.addEventListener('click', () => {
+            expanded = !expanded;
+            overviewText.classList.toggle('line-clamp-2', !expanded);
+            overviewArrow.classList.toggle('rotate-180', expanded);
+            overviewLabel.textContent = expanded ? 'Daralt' : 'Devamını Oku';
+        });
+    }
+
     // Detect first tab
     const firstTab = document.querySelector('.gallery-tab');
     if (firstTab) {
