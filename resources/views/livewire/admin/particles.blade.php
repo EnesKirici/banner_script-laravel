@@ -35,6 +35,10 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
     public string $themeColor = '#a855f7';
     public string $themeConfig = '';
 
+    // Spider-specific form alanları
+    public string $spiderColor = '#ffffff';
+    public int $spiderCount = 2;
+
     // Bat Animation ayarları
     public bool $batEnabled = false;
     public int $batCount = 5;
@@ -70,6 +74,18 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
         return ParticleTheme::active();
     }
 
+    #[Computed]
+    public function isSpiderTheme(): bool
+    {
+        if (! $this->editingThemeId) {
+            return false;
+        }
+
+        $config = json_decode($this->themeConfig, true);
+
+        return ($config['renderer'] ?? null) === 'spider';
+    }
+
     public function openCreateModal(): void
     {
         $this->editingThemeId = null;
@@ -103,6 +119,13 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
         $this->themeName = $theme->name;
         $this->themeColor = $theme->preview_color ?? '#a855f7';
         $this->themeConfig = json_encode($theme->config, JSON_PRETTY_PRINT);
+
+        // Spider temasıysa config'den alanları parse et
+        if (($theme->config['renderer'] ?? null) === 'spider') {
+            $this->spiderColor = $theme->config['color'] ?? '#ffffff';
+            $this->spiderCount = (int) ($theme->config['spider_count'] ?? 2);
+        }
+
         $this->showModal = true;
     }
 
@@ -115,13 +138,29 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
 
     public function saveTheme(): void
     {
-        $this->validate([
-            'themeName' => 'required|string|max:100',
-            'themeConfig' => 'required|json',
-            'themeColor' => 'nullable|string|max:20',
-        ]);
+        // Spider temasıysa JSON validation atla, config'i property'lerden oluştur
+        if ($this->isSpiderTheme) {
+            $this->validate([
+                'themeName' => 'required|string|max:100',
+                'themeColor' => 'nullable|string|max:20',
+                'spiderColor' => 'required|string|max:20',
+                'spiderCount' => 'required|integer|min:1|max:10',
+            ]);
 
-        $config = json_decode($this->themeConfig, true);
+            $config = [
+                'renderer' => 'spider',
+                'color' => $this->spiderColor,
+                'spider_count' => $this->spiderCount,
+            ];
+        } else {
+            $this->validate([
+                'themeName' => 'required|string|max:100',
+                'themeConfig' => 'required|json',
+                'themeColor' => 'nullable|string|max:20',
+            ]);
+
+            $config = json_decode($this->themeConfig, true);
+        }
 
         if ($this->editingThemeId) {
             $theme = ParticleTheme::findOrFail($this->editingThemeId);
@@ -567,12 +606,33 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
                             </div>
                         </div>
 
+                        @if($this->isSpiderTheme)
+                        {{-- Spider-specific alanlar --}}
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-300 mb-2">Örümcek Rengi</label>
+                            <div class="flex gap-2">
+                                <input type="color" wire:model="spiderColor"
+                                       class="w-12 h-10 rounded cursor-pointer bg-transparent border-0">
+                                <input type="text" wire:model="spiderColor"
+                                       class="flex-1 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-fuchsia-500 font-mono text-sm">
+                            </div>
+                            @error('spiderColor') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-300 mb-2">Örümcek Sayısı</label>
+                            <input type="number" wire:model="spiderCount" min="1" max="10"
+                                   class="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-fuchsia-500 font-mono text-sm">
+                            @error('spiderCount') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
+                        @else
                         <div>
                             <label class="block text-sm font-medium text-neutral-300 mb-2">Konfigürasyon (JSON)</label>
                             <textarea wire:model="themeConfig" rows="20"
                                       class="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-fuchsia-500 font-mono text-sm resize-none"></textarea>
                             @error('themeConfig') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
+                        @endif
                     </div>
 
                     <div class="mt-6 flex gap-3">
@@ -589,6 +649,16 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
                 </div>
 
                 {{-- Preview --}}
+                @if($this->isSpiderTheme)
+                <div class="w-1/2 bg-neutral-950 relative overflow-hidden"
+                     x-data="spiderPreview('{{ $spiderColor }}')" x-init="init()">
+                    <canvas x-ref="spiderCanvas" class="w-full h-full"></canvas>
+                    <div class="absolute bottom-4 left-4 text-xs text-neutral-600">
+                        <span class="inline-block w-2 h-2 rounded-full mr-1" style="background: {{ $spiderColor }}"></span>
+                        {{ $spiderColor }}
+                    </div>
+                </div>
+                @else
                 <div class="w-1/2 bg-neutral-950 relative overflow-hidden"
                      x-data="particlePreview({ color: $wire.themeColor || '#a855f7', colors: [$wire.themeColor || '#a855f7'], shape: 'circle', sides: 6, points: 5, links: true, direction: 'none', speed: 1, count: 50, wobble: false })"
                      x-on:remove.window="destroy()">
@@ -598,6 +668,7 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
                         {{ $themeColor }}
                     </div>
                 </div>
+                @endif
             </div>
         </div>
     </div>
