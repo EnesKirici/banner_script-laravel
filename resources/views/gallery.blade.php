@@ -360,7 +360,14 @@
 
         {{-- Preview Content --}}
         <div class="absolute inset-0 flex flex-col items-center justify-center p-4" id="lightboxBackdrop">
-            <img id="lightboxImage" src="" alt="Preview" class="max-w-[90vw] max-h-[75vh] object-contain rounded-lg">
+            {{-- Image Container --}}
+            <div class="relative flex items-center justify-center max-w-[90vw] max-h-[75vh] w-full flex-1 min-h-0">
+                {{-- Spinner --}}
+                <div id="lightboxSpinner" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+                    <div class="lightbox-loader"></div>
+                </div>
+                <img id="lightboxImage" src="" alt="Preview" class="max-w-full max-h-[75vh] object-contain rounded-lg hidden">
+            </div>
 
             <div class="mt-4 flex items-center gap-2 sm:gap-4 bg-neutral-900/90 backdrop-blur-sm px-3 py-2 sm:px-6 sm:py-3 flex-wrap justify-center rounded-2xl sm:rounded-full max-w-[95vw] border border-white/10">
                 <span id="lightboxDims" class="text-xs font-mono text-fuchsia-400">...</span>

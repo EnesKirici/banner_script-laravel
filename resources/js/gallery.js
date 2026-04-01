@@ -82,6 +82,7 @@ function initGallery() {
         lightboxPrev: document.getElementById('lightboxPrev'),
         lightboxNext: document.getElementById('lightboxNext'),
         lightboxBackdrop: document.getElementById('lightboxBackdrop'),
+        lightboxSpinner: document.getElementById('lightboxSpinner'),
         downloadProgress: document.getElementById('downloadProgress'),
         downloadProgressText: document.getElementById('downloadProgressText'),
         downloadProgressBar: document.getElementById('downloadProgressBar'),
@@ -460,12 +461,42 @@ function openLightbox(index) {
     const img = images[index];
 
     const tmdbSize = state.selectedSize === 'w1920' ? 'original' : state.selectedSize;
-    els.lightboxImage.src = `${TMDB_IMAGE_BASE}${tmdbSize}${img.file_path}`;
+    const fullUrl = `${TMDB_IMAGE_BASE}${tmdbSize}${img.file_path}`;
+
+    // Görseli gizle, spinner göster
+    els.lightboxImage.classList.add('hidden');
+    els.lightboxSpinner.classList.remove('hidden');
+    els.lightboxImage.src = '';
     els.lightboxDims.textContent = '...';
     els.lightboxCounter.textContent = `${index + 1} / ${images.length}`;
 
     els.lightbox.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+
+    // Görseli yükle
+    const preloader = new Image();
+    preloader.onload = () => {
+        if (state.lightboxIndex === index) {
+            els.lightboxImage.src = fullUrl;
+            els.lightboxImage.classList.remove('hidden');
+            els.lightboxSpinner.classList.add('hidden');
+            // Komşu görselleri preload et
+            preloadNeighbors(index);
+        }
+    };
+    preloader.src = fullUrl;
+}
+
+function preloadNeighbors(currentIndex) {
+    const images = getCurrentTabImages();
+    const tmdbSize = state.selectedSize === 'w1920' ? 'original' : state.selectedSize;
+
+    [currentIndex - 1, currentIndex + 1].forEach(i => {
+        if (i >= 0 && i < images.length) {
+            const pre = new Image();
+            pre.src = `${TMDB_IMAGE_BASE}${tmdbSize}${images[i].file_path}`;
+        }
+    });
 }
 
 function closeLightbox() {

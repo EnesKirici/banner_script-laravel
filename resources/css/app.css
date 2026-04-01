@@ -136,6 +136,25 @@
         }
     }
 
+    /* Lightbox spinner */
+    .lightbox-loader {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 3px solid rgba(192, 38, 211, 0.15);
+        border-top-color: #d946ef;
+        animation: lb-spin 0.8s linear infinite, lb-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes lb-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes lb-pulse {
+        0%, 100% { border-top-color: #d946ef; box-shadow: 0 0 8px rgba(217, 70, 239, 0.3); }
+        50% { border-top-color: #a855f7; box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
+    }
+
     .elw-logo-hover {
         transition: all 0.4s ease;
     }
