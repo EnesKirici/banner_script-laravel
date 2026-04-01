@@ -19,6 +19,9 @@ Route::middleware(\App\Http\Middleware\EnableBfCache::class)->group(function () 
     // Particles API (public - for frontend)
     Route::get('/api/particles/config', [AdminController::class, 'getActiveThemeConfig'])->name('api.particles.config')->middleware('throttle:60,1');
 
+    // Bat Animation API (public - for frontend)
+    Route::get('/api/bat-animation/config', [AdminController::class, 'getBatAnimationConfig'])->name('api.bat-animation.config')->middleware('throttle:60,1');
+
     // Tools (Public)
     Volt::route('/tools/image-converter', 'image-converter')->name('tools.image-converter');
 });

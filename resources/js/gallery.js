@@ -96,14 +96,29 @@ function initGallery() {
         const overviewLabel = document.getElementById('overviewLabel');
         let expanded = false;
 
-        if (overviewText.scrollHeight > overviewText.clientHeight) {
+        const collapsedHeight = overviewText.clientHeight;
+        overviewText.classList.remove('line-clamp-2');
+        const fullHeight = overviewText.scrollHeight;
+        overviewText.classList.add('line-clamp-2');
+
+        if (fullHeight > collapsedHeight) {
             overviewToggle.classList.remove('hidden');
             overviewToggle.classList.add('flex');
+
+            overviewText.style.maxHeight = collapsedHeight + 'px';
+            overviewText.style.overflow = 'hidden';
+            overviewText.style.transition = 'max-height 0.3s ease';
         }
 
         overviewToggle.addEventListener('click', () => {
             expanded = !expanded;
-            overviewText.classList.toggle('line-clamp-2', !expanded);
+            if (expanded) {
+                overviewText.classList.remove('line-clamp-2');
+                overviewText.style.maxHeight = fullHeight + 'px';
+            } else {
+                overviewText.style.maxHeight = collapsedHeight + 'px';
+                setTimeout(() => overviewText.classList.add('line-clamp-2'), 300);
+            }
             overviewArrow.classList.toggle('rotate-180', expanded);
             overviewLabel.textContent = expanded ? 'Daralt' : 'Devamını Oku';
         });

@@ -117,6 +117,9 @@
         <!-- Particles Background -->
         <div id="tsparticles" class="absolute! inset-0 z-0 pointer-events-none"></div>
 
+        <!-- Bat Animation Background -->
+        <div id="bat-animation-layer"></div>
+
         <!-- Gradient Overlay -->
         <div class="absolute inset-0 bg-linear-to-b from-transparent via-neutral-950/50 to-neutral-950 pointer-events-none z-1"></div>
 
