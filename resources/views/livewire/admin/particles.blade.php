@@ -432,7 +432,14 @@ new #[Layout('admin.layout')] #[Title('Particles Yönetimi')] class extends Comp
 
                 {{-- Ayarlar Accordion --}}
                 @if($batEnabled)
-                <div x-show="showSettings" x-collapse x-cloak>
+                <div x-show="showSettings" x-cloak
+                     x-transition:enter="transition-all ease-out duration-200"
+                     x-transition:enter-start="opacity-0 max-h-0"
+                     x-transition:enter-end="opacity-100 max-h-[600px]"
+                     x-transition:leave="transition-all ease-in duration-150"
+                     x-transition:leave-start="opacity-100 max-h-[600px]"
+                     x-transition:leave-end="opacity-0 max-h-0"
+                     class="overflow-hidden">
                     <div class="px-4 pb-4 space-y-4 border-t border-white/5 pt-4">
                         {{-- Renkler --}}
                         <div class="grid grid-cols-2 gap-3">
