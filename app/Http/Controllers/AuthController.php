@@ -56,11 +56,12 @@ class AuthController extends Controller
             Cache::put($attemptsKey, $attempts, now()->addMinutes(15));
 
             if ($attempts >= 10) {
-                BlockedIp::updateOrCreate(
-                    ['ip_address' => $ip],
-                    ['reason' => "Brute force: {$attempts} başarısız giriş denemesi", 'blocked_until' => null]
+                BlockedIp::autoBan(
+                    ip: $ip,
+                    reason: "Brute force: {$attempts} başarısız giriş denemesi",
+                    banType: 'brute_force',
+                    requestCount: $attempts,
                 );
-                Cache::forget("blocked_ip_{$ip}");
                 Cache::forget($attemptsKey);
 
                 throw ValidationException::withMessages([

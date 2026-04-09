@@ -9,6 +9,79 @@ class ImageConverterService
     private const MAX_PIXELS = 25_000_000;
 
     /**
+     * Dosyanın gerçek bir resim olduğunu derinlemesine doğrula.
+     *
+     * @return array{valid: bool, reason: string|null}
+     */
+    public function validateUploadSecurity(string $path, string $clientExtension): array
+    {
+        $config = config('security.upload');
+
+        // 1. Dosya boyutu kontrolü
+        $fileSize = filesize($path);
+        if ($fileSize === false || $fileSize > $config['max_size_kb'] * 1024) {
+            return ['valid' => false, 'reason' => 'Dosya boyutu limiti aşıldı'];
+        }
+
+        // 2. Uzantı kontrolü
+        $ext = strtolower($clientExtension);
+        if (! in_array($ext, $config['allowed_extensions'], true)) {
+            return ['valid' => false, 'reason' => "Yasaklı uzantı: {$ext}"];
+        }
+
+        // 3. Tehlikeli dosya imzası kontrolü (magic bytes)
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            return ['valid' => false, 'reason' => 'Dosya okunamadı'];
+        }
+
+        $header = fread($handle, 64);
+        fclose($handle);
+
+        if ($header === false) {
+            return ['valid' => false, 'reason' => 'Dosya başlığı okunamadı'];
+        }
+
+        foreach ($config['dangerous_signatures'] as $signature => $description) {
+            if (str_starts_with($header, $signature)) {
+                return ['valid' => false, 'reason' => "Tehlikeli dosya tespit edildi: {$description}"];
+            }
+        }
+
+        // 4. PHP kodu taraması (dosya içeriğinde)
+        $content = file_get_contents($path, false, null, 0, 8192);
+        if ($content !== false) {
+            $dangerousPatterns = ['<?php', '<?=', '<script', 'eval(', 'base64_decode(', 'system(', 'exec(', 'passthru('];
+            foreach ($dangerousPatterns as $pattern) {
+                if (stripos($content, $pattern) !== false) {
+                    return ['valid' => false, 'reason' => "Zararlı içerik tespit edildi: {$pattern}"];
+                }
+            }
+        }
+
+        // 5. Gerçek MIME type kontrolü (finfo)
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+
+        if (! in_array($mimeType, $config['allowed_mimes'], true)) {
+            return ['valid' => false, 'reason' => "Geçersiz MIME tipi: {$mimeType}"];
+        }
+
+        // 6. getimagesize ile gerçek resim doğrulaması
+        $imageInfo = @getimagesize($path);
+        if ($imageInfo === false) {
+            return ['valid' => false, 'reason' => 'Dosya geçerli bir resim değil (getimagesize başarısız)'];
+        }
+
+        $allowedImageTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP, IMAGETYPE_AVIF];
+        if (! in_array($imageInfo[2], $allowedImageTypes, true)) {
+            return ['valid' => false, 'reason' => 'Desteklenmeyen resim formatı'];
+        }
+
+        return ['valid' => true, 'reason' => null];
+    }
+
+    /**
      * @return array{width: int, height: int, format: string, size: int}
      */
     public function getImageInfo(string $path): array
@@ -22,7 +95,9 @@ class ImageConverterService
         $format = match ($info[2]) {
             IMAGETYPE_JPEG => 'jpg',
             IMAGETYPE_PNG => 'png',
+            IMAGETYPE_GIF => 'gif',
             IMAGETYPE_WEBP => 'webp',
+            IMAGETYPE_AVIF => 'avif',
             default => throw new \RuntimeException('Desteklenmeyen format.'),
         };
 
@@ -50,6 +125,7 @@ class ImageConverterService
             'jpg', 'jpeg' => imagecreatefromjpeg($sourcePath),
             'png' => imagecreatefrompng($sourcePath),
             'webp' => imagecreatefromwebp($sourcePath),
+            'avif' => imagecreatefromavif($sourcePath),
             default => false,
         };
 
@@ -57,8 +133,8 @@ class ImageConverterService
             throw new \RuntimeException('Resim işlenemedi.');
         }
 
-        // PNG/WebP → JPG: şeffaf arka planı beyaz yap
-        if ($targetFormat === 'jpg' && in_array($sourceFormat, ['png', 'webp'])) {
+        // PNG/WebP/AVIF → JPG: şeffaf arka planı beyaz yap
+        if ($targetFormat === 'jpg' && in_array($sourceFormat, ['png', 'webp', 'avif'])) {
             $width = imagesx($gdImage);
             $height = imagesy($gdImage);
             $bg = imagecreatetruecolor($width, $height);
@@ -69,8 +145,8 @@ class ImageConverterService
             $gdImage = $bg;
         }
 
-        // PNG/JPG → WebP veya PNG: alpha kanalını koru
-        if (in_array($targetFormat, ['png', 'webp']) && $sourceFormat !== 'jpg') {
+        // PNG/JPG → WebP, PNG veya AVIF: alpha kanalını koru
+        if (in_array($targetFormat, ['png', 'webp', 'avif']) && $sourceFormat !== 'jpg') {
             imagesavealpha($gdImage, true);
             imagealphablending($gdImage, false);
         }
@@ -87,6 +163,7 @@ class ImageConverterService
             'jpg' => imagejpeg($gdImage, $outputPath, $quality),
             'png' => imagepng($gdImage, $outputPath, (int) floor((100 - $quality) * 9 / 100)),
             'webp' => imagewebp($gdImage, $outputPath, $quality),
+            'avif' => imageavif($gdImage, $outputPath, $quality),
             default => false,
         };
 

@@ -15,10 +15,18 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
     #[Url]
     public string $search = '';
 
+    #[Url]
+    public string $filterType = '';
+
     public string $newIp = '';
     public string $newReason = 'Manuel engelleme';
 
     public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterType(): void
     {
         $this->resetPage();
     }
@@ -35,7 +43,11 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
 
         BlockedIp::updateOrCreate(
             ['ip_address' => $this->newIp],
-            ['reason' => $this->newReason, 'blocked_until' => null]
+            [
+                'reason' => $this->newReason,
+                'ban_type' => 'manual',
+                'blocked_until' => null,
+            ]
         );
 
         Cache::forget("blocked_ip_{$this->newIp}");
@@ -53,7 +65,6 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
 
     public function rendering(): void
     {
-        // Süresi dolmuş kayıtları temizle
         BlockedIp::whereNotNull('blocked_until')
             ->where('blocked_until', '<=', now())
             ->delete();
@@ -64,12 +75,30 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
         $query = BlockedIp::query()->latest();
 
         if ($this->search) {
-            $query->where('ip_address', 'like', '%' . str_replace(['%', '_'], ['\%', '\_'], $this->search) . '%');
+            $query->where(function ($q) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $this->search);
+                $q->where('ip_address', 'like', "%{$escaped}%")
+                    ->orWhere('reason', 'like', "%{$escaped}%");
+            });
         }
+
+        if ($this->filterType) {
+            $query->where('ban_type', $this->filterType);
+        }
+
+        $stats = [
+            'total' => BlockedIp::count(),
+            'permanent' => BlockedIp::whereNull('blocked_until')->count(),
+            'temporary' => BlockedIp::whereNotNull('blocked_until')->where('blocked_until', '>', now())->count(),
+            'rate_limit' => BlockedIp::where('ban_type', 'rate_limit')->count(),
+            'suspicious_upload' => BlockedIp::where('ban_type', 'suspicious_upload')->count(),
+            'brute_force' => BlockedIp::where('ban_type', 'brute_force')->count(),
+            'manual' => BlockedIp::where('ban_type', 'manual')->count(),
+        ];
 
         return [
             'blockedIps' => $query->paginate(15),
-            'totalCount' => BlockedIp::count(),
+            'stats' => $stats,
         ];
     }
 };
@@ -80,7 +109,27 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold">Engelli IP'ler</h1>
-            <p class="text-sm text-neutral-500 mt-1">Toplam {{ $totalCount }} engelli IP</p>
+            <p class="text-sm text-neutral-500 mt-1">Toplam {{ $stats['total'] }} engelli IP</p>
+        </div>
+    </div>
+
+    {{-- İstatistik Kartları --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-neutral-900 rounded-xl border border-white/5 p-4">
+            <p class="text-xs text-neutral-500 uppercase tracking-wider">Kalıcı Ban</p>
+            <p class="text-2xl font-bold text-red-400 mt-1">{{ $stats['permanent'] }}</p>
+        </div>
+        <div class="bg-neutral-900 rounded-xl border border-white/5 p-4">
+            <p class="text-xs text-neutral-500 uppercase tracking-wider">Geçici Ban</p>
+            <p class="text-2xl font-bold text-yellow-400 mt-1">{{ $stats['temporary'] }}</p>
+        </div>
+        <div class="bg-neutral-900 rounded-xl border border-white/5 p-4">
+            <p class="text-xs text-neutral-500 uppercase tracking-wider">Rate Limit</p>
+            <p class="text-2xl font-bold text-orange-400 mt-1">{{ $stats['rate_limit'] }}</p>
+        </div>
+        <div class="bg-neutral-900 rounded-xl border border-white/5 p-4">
+            <p class="text-xs text-neutral-500 uppercase tracking-wider">Şüpheli Yükleme</p>
+            <p class="text-2xl font-bold text-purple-400 mt-1">{{ $stats['suspicious_upload'] }}</p>
         </div>
     </div>
 
@@ -103,58 +152,88 @@ new #[Layout('admin.layout')] #[Title('Engelli IP\'ler')] class extends Componen
         </form>
     </div>
 
-    {{-- Arama --}}
-    <div class="mb-4">
-        <input type="text" wire:model.live.debounce.300ms="search" placeholder="IP ara..."
+    {{-- Arama & Filtre --}}
+    <div class="flex flex-col md:flex-row gap-3 mb-4">
+        <input type="text" wire:model.live.debounce.300ms="search" placeholder="IP veya sebep ara..."
             class="w-full md:w-80 bg-neutral-800 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-fuchsia-500/50 transition-colors">
+        <select wire:model.live="filterType"
+            class="bg-neutral-800 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-fuchsia-500/50 transition-colors">
+            <option value="">Tüm Tipler</option>
+            <option value="manual">Manuel</option>
+            <option value="rate_limit">Rate Limit</option>
+            <option value="suspicious_upload">Şüpheli Yükleme</option>
+            <option value="brute_force">Brute Force</option>
+        </select>
     </div>
 
     {{-- Tablo --}}
     <div class="bg-neutral-900 rounded-xl border border-white/5 overflow-hidden">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-white/5">
-                    <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">IP Adresi</th>
-                    <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Sebep</th>
-                    <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Süre</th>
-                    <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Tarih</th>
-                    <th class="text-right text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">İşlem</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-                @forelse($blockedIps as $blocked)
-                <tr class="hover:bg-white/[0.02] transition-colors" wire:key="blocked-{{ $blocked->id }}">
-                    <td class="px-6 py-4">
-                        <span class="font-mono text-sm text-red-400">{{ $blocked->ip_address }}</span>
-                    </td>
-                    <td class="px-6 py-4 text-sm text-neutral-400">{{ $blocked->reason }}</td>
-                    <td class="px-6 py-4">
-                        @if($blocked->blocked_until)
-                            <span class="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-400">
-                                {{ $blocked->blocked_until->diffForHumans() }}
-                            </span>
-                        @else
-                            <span class="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400">Kalıcı</span>
-                        @endif
-                    </td>
-                    <td class="px-6 py-4 text-sm text-neutral-500">{{ $blocked->created_at->format('d.m.Y H:i') }}</td>
-                    <td class="px-6 py-4 text-right">
-                        <button wire:click="unblock({{ $blocked->id }})"
-                            wire:confirm="Bu IP'nin engelini kaldırmak istediğinize emin misiniz?"
-                            class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 transition-colors">
-                            Engeli Kaldır
-                        </button>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-neutral-500">
-                        Engelli IP bulunmuyor.
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-white/5">
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">IP Adresi</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Tip</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Sebep</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">İstek</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">İhlal</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Süre</th>
+                        <th class="text-left text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">Tarih</th>
+                        <th class="text-right text-xs uppercase tracking-wider text-neutral-500 font-medium px-6 py-4">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    @forelse($blockedIps as $blocked)
+                    <tr class="hover:bg-white/2 transition-colors" wire:key="blocked-{{ $blocked->id }}">
+                        <td class="px-6 py-4">
+                            <span class="font-mono text-sm text-red-400">{{ $blocked->ip_address }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            @switch($blocked->ban_type)
+                                @case('rate_limit')
+                                    <span class="text-xs px-2 py-1 rounded bg-orange-500/10 text-orange-400">Rate Limit</span>
+                                    @break
+                                @case('suspicious_upload')
+                                    <span class="text-xs px-2 py-1 rounded bg-purple-500/10 text-purple-400">Şüpheli Yükleme</span>
+                                    @break
+                                @case('brute_force')
+                                    <span class="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400">Brute Force</span>
+                                    @break
+                                @default
+                                    <span class="text-xs px-2 py-1 rounded bg-neutral-500/10 text-neutral-400">Manuel</span>
+                            @endswitch
+                        </td>
+                        <td class="px-6 py-4 text-sm text-neutral-400 max-w-xs truncate" title="{{ $blocked->reason }}">{{ $blocked->reason }}</td>
+                        <td class="px-6 py-4 text-sm text-neutral-400 font-mono">{{ $blocked->request_count ?: '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-neutral-400 font-mono">{{ $blocked->violation_count ?: '-' }}</td>
+                        <td class="px-6 py-4">
+                            @if($blocked->blocked_until)
+                                <span class="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-400">
+                                    {{ $blocked->blocked_until->diffForHumans() }}
+                                </span>
+                            @else
+                                <span class="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400">Kalıcı</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-sm text-neutral-500 whitespace-nowrap">{{ $blocked->created_at->format('d.m.Y H:i') }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button wire:click="unblock({{ $blocked->id }})"
+                                wire:confirm="Bu IP'nin engelini kaldırmak istediğinize emin misiniz?"
+                                class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 transition-colors">
+                                Engeli Kaldır
+                            </button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-neutral-500">
+                            Engelli IP bulunmuyor.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {{-- Pagination --}}

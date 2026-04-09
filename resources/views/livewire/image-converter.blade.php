@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\BlockedIp;
+use App\Models\SecurityLog;
 use App\Services\ImageConverterService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -29,11 +33,13 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
         $this->message = '';
         $this->messageType = '';
 
+        $maxSizeKb = config('security.upload.max_size_kb', 10240);
+
         $this->validate([
-            'photos.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'photos.*' => ['required', 'file', 'mimes:jpg,jpeg,png,gif,webp,avif', "max:{$maxSizeKb}"],
         ], [
-            'photos.*.max' => 'Her dosya en fazla 10MB olabilir.',
-            'photos.*.mimes' => 'Sadece JPG, PNG ve WebP formatları desteklenir.',
+            'photos.*.max' => "Her dosya en fazla " . ($maxSizeKb / 1024) . "MB olabilir.",
+            'photos.*.mimes' => 'Sadece JPG, PNG, GIF, WebP ve AVIF formatları desteklenir.',
         ]);
 
         if (count($this->convertedFiles) + count($this->photos) > 20) {
@@ -45,10 +51,24 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
         }
 
         $converter = app(ImageConverterService::class);
+        $ip = request()->ip();
 
         foreach ($this->photos as $photo) {
             try {
                 $tempPath = $photo->getRealPath();
+                $clientExtension = strtolower($photo->getClientOriginalExtension());
+
+                // Derin güvenlik doğrulaması
+                $validation = $converter->validateUploadSecurity($tempPath, $clientExtension);
+
+                if (! $validation['valid']) {
+                    $this->trackSuspiciousUpload($ip, $photo->getClientOriginalName(), $validation['reason']);
+                    $this->message = 'Güvenlik ihlali: Geçersiz dosya reddedildi.';
+                    $this->messageType = 'error';
+
+                    continue;
+                }
+
                 $info = $converter->getImageInfo($tempPath);
 
                 $previewUrl = null;
@@ -229,6 +249,47 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
         $this->messageType = '';
     }
 
+    private function trackSuspiciousUpload(string $ip, string $fileName, string $reason): void
+    {
+        $config = config('security.upload');
+        $cacheKey = "suspicious_upload_{$ip}";
+        $window = $config['suspicious_window'] * 60;
+
+        $attempts = (int) Cache::get($cacheKey, 0) + 1;
+        Cache::put($cacheKey, $attempts, $window);
+
+        Log::channel('daily')->warning('Şüpheli dosya yükleme denemesi', [
+            'ip' => $ip,
+            'file' => $fileName,
+            'reason' => $reason,
+            'attempt' => $attempts,
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        SecurityLog::record(
+            ip: $ip,
+            eventType: 'suspicious_upload',
+            description: "Şüpheli dosya: {$fileName} - {$reason}",
+            requestCount: $attempts,
+            userAgent: request()->userAgent(),
+            url: request()->fullUrl(),
+            metadata: ['file_name' => $fileName, 'reason' => $reason],
+        );
+
+        if ($attempts >= $config['ban_after_attempts']) {
+            BlockedIp::autoBan(
+                ip: $ip,
+                reason: "Şüpheli dosya yükleme: {$attempts} deneme ({$reason})",
+                banType: 'suspicious_upload',
+                requestCount: $attempts,
+            );
+
+            Cache::forget($cacheKey);
+
+            abort(403, 'Erişiminiz engellenmiştir.');
+        }
+    }
+
     private function formatBytes(int $bytes): string
     {
         if ($bytes >= 1048576) {
@@ -349,7 +410,7 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
         id="ic-file-input"
         wire:model="photos"
         multiple
-        accept="image/png,image/jpeg,image/webp"
+        accept="image/png,image/jpeg,image/webp,image/avif"
         class="hidden"
     >
 
@@ -359,7 +420,7 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
             Resim Dönüştürücü
         </h1>
         <p class="text-neutral-400 max-w-lg mx-auto">
-            PNG, WebP ve JPG formatları arasında hızlı ve kolay dönüşüm yapın.
+            PNG, WebP, AVIF ve JPG formatları arasında hızlı ve kolay dönüşüm yapın.
             Tekli veya çoklu dosya desteği ile boyut bilgilerini anında görün.
         </p>
     </div>
@@ -530,7 +591,7 @@ new #[Layout('layouts.tool')] #[Title('Resim Dönüştürücü')] class extends 
                 <div class="flex items-center gap-2">
                     <span class="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Format</span>
                     <div class="flex gap-1">
-                        @foreach(['png', 'webp', 'jpg'] as $fmt)
+                        @foreach(['png', 'webp', 'avif', 'jpg'] as $fmt)
                             <button
                                 @click="fmt = '{{ $fmt }}'"
                                 :class="fmt === '{{ $fmt }}'

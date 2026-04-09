@@ -41,4 +41,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Volt::route('/admin/cache', 'admin.cache-manager')->name('admin.cache');
     Volt::route('/admin/blocked-ips', 'admin.blocked-ips')->name('admin.blocked-ips');
     Volt::route('/admin/activity-logs', 'admin.activity-logs')->name('admin.activity-logs');
+    Volt::route('/admin/security-logs', 'admin.security-logs')->name('admin.security-logs');
 });
